@@ -75,11 +75,7 @@ public class Main {
         }
 
         for (Database db : dbs) {
-            //db.setConn(new DBHelper().getConnection(db));
             db.setConn(new ArrayList<>());
-        }
-
-        for (Database db : dbs) {
             db.setThread(new ArrayList<>());
             for (int i = 1; i <= dbN; i++) {
                 Thread thread = new Thread(new Runnable() {
@@ -97,7 +93,6 @@ public class Main {
                         try {
                             conn = new DBHelper().getConnection(db);
                             db.getConn().add(conn);
-                            //System.out.println(db.toString());
                             statement = conn.prepareStatement(query);
                             resultSet = statement.executeQuery();
                             while (resultSet.next()) {
@@ -107,61 +102,59 @@ public class Main {
                             statement = conn.prepareStatement("set autocommit=off");
                             statement.executeQuery();
 
-                            //for (int i = 1; i <= dbN; i++) {
-                                query = "create database " + host + "_" + dbRandom;
-                                resultCode = statement.executeUpdate(query);
-                                //Logger.getLogger(Main.class.getName()).log(Level.INFO, query);
-                                for (int k = 1; k <= tableN; k++) {
-                                    tableQuery = "create table " + host + "_" + dbRandom
-                                            + ".tbl_" + k + " (col int not null AUTO_INCREMENT, "
-                                            + "v1 varchar(255), "
-                                            + "v2 varchar(255), "
-                                            + "v3 varchar(255), " + "v4 varchar(255), "
-                                            + "v5 varchar(255), " + "v6 varchar(255), "
-                                            + "v7 varchar(255), "
-                                            + "primary key(col))";
-                                    resultCode = statement.executeUpdate(tableQuery);
-                                    //Logger.getLogger(Main.class.getName()).log(Level.INFO, tableQuery);
-                                    for (int j = 1; j <= rowN; j++) {
-                                        insertQuery = "insert delayed into "
-                                                + host + "_" + dbRandom + ".tbl_" + k
-                                                + " (v1, v2, v3, v4, v5, v6, v7) "
-                                                + " values (" //+ j + ", "
-                                                + Database.CLOB + ", "
-                                                + Database.CLOB + ", "
-                                                + Database.CLOB + ", "
-                                                + Database.CLOB + ", "
-                                                + Database.CLOB + ", "
-                                                + Database.CLOB + ", "
-                                                + Database.CLOB + ") ";
+                            query = "create database " + host + "_" + dbRandom;
+                            resultCode = statement.executeUpdate(query);
+                            Logger.getLogger(Main.class.getName()).log(Level.INFO, query);
+                            for (int k = 1; k <= tableN; k++) {
+                                tableQuery = "create table " + host + "_" + dbRandom
+                                        + ".tbl_" + k + " (col int not null AUTO_INCREMENT, "
+                                        + "v1 varchar(255), "
+                                        + "v2 varchar(255), "
+                                        + "v3 varchar(255), " + "v4 varchar(255), "
+                                        + "v5 varchar(255), " + "v6 varchar(255), "
+                                        + "v7 varchar(255), "
+                                        + "primary key(col))";
+                                resultCode = statement.executeUpdate(tableQuery);
+                                Logger.getLogger(Main.class.getName()).log(Level.INFO, tableQuery);
+                                for (int j = 1; j <= rowN; j++) {
+                                    insertQuery = "insert delayed into "
+                                            + host + "_" + dbRandom + ".tbl_" + k
+                                            + " (v1, v2, v3, v4, v5, v6, v7) "
+                                            + " values (" //+ j + ", "
+                                            + Database.CLOB + ", "
+                                            + Database.CLOB + ", "
+                                            + Database.CLOB + ", "
+                                            + Database.CLOB + ", "
+                                            + Database.CLOB + ", "
+                                            + Database.CLOB + ", "
+                                            + Database.CLOB + ") ";
 
+                                    try {
+                                        statement = conn.prepareStatement(insertQuery);
+                                        resultCode = statement.executeUpdate(insertQuery);
+
+                                        Logger.getLogger(Main.class.getName()).log(Level.INFO, insertQuery);
+                                        Logger.getLogger(Main.class.getName()).log(Level.INFO, "resultCode=" + resultCode);
+                                    } catch (MySQLTransactionRollbackException ex) {
                                         try {
                                             statement = conn.prepareStatement(insertQuery);
                                             resultCode = statement.executeUpdate(insertQuery);
-
-                                            //Logger.getLogger(Main.class.getName()).log(Level.INFO, insertQuery);
-                                            //Logger.getLogger(Main.class.getName()).log(Level.INFO, "resultCode=" + resultCode);
-                                        } catch (MySQLTransactionRollbackException ex) {
+                                            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                                        } catch (SQLException ex1) {
+                                            statement = conn.prepareStatement("commit");
+                                            statement.executeQuery();
+                                            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex1);
+                                        } finally {
                                             try {
-                                                statement = conn.prepareStatement(insertQuery);
-                                                resultCode = statement.executeUpdate(insertQuery);
-                                                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
-                                            } catch (SQLException ex1) {
-                                                statement = conn.prepareStatement("commit");
-                                                statement.executeQuery();
-                                                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex1);
-                                            } finally {
-                                                try {
-                                                    statement.close();
-                                                    conn.close();
-                                                } catch (SQLException e) {
-                                                    Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, e);
-                                                }
+                                                statement.close();
+                                                conn.close();
+                                            } catch (SQLException e) {
+                                                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, e);
                                             }
                                         }
                                     }
                                 }
-                            //}
+                            }
 
                             statement = conn.prepareStatement("commit");
                             statement.executeQuery();
@@ -177,8 +170,6 @@ public class Main {
                                 if (conn != null) {
                                     conn.close();
                                 }
-                                //statement = null;
-                                //db.setConn(null);
                             } catch (SQLException ex) {
                                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
                             }
