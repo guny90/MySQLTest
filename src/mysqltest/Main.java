@@ -11,7 +11,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
@@ -30,6 +29,7 @@ public class Main {
     public static int dbN;
     public static int tableN;
     public static int rowN;
+    public static boolean isLogged;
 
     /**
      * @param args the command line arguments
@@ -40,8 +40,11 @@ public class Main {
 
         ArrayList<Database> dbs = new ArrayList<>();
 
-        if (args.length != 4) {
-            System.out.println("Please enter the arguments: 1 - number of hosts, 2 - number of dbs, 3 - number of tables for each db, 4 - number of rows for each table");
+        if (args.length != 5) {
+            System.out.println("Please enter the arguments: 1 - number of hosts, "
+                    + "2 - number of dbs, 3 - number of tables for each db, "
+                    + "4 - number of rows for each table, "
+                    + "5 - to log or not (y/n)");
             System.exit(-1);
         }
 
@@ -49,6 +52,7 @@ public class Main {
         dbN = Integer.parseInt(args[1]);
         tableN = Integer.parseInt(args[2]);
         rowN = Integer.parseInt(args[3]);
+        isLogged = args[4].equals("y"); 
 
         console = System.console();
 
@@ -74,9 +78,13 @@ public class Main {
             }
         }
 
-        for (Database db : dbs) {
+        dbs.stream().map((db) -> {
             db.setConn(new ArrayList<>());
+            return db;
+        }).map((db) -> {
             db.setThread(new ArrayList<>());
+            return db;
+        }).forEach((db) -> {
             for (int i = 1; i <= dbN; i++) {
                 Thread thread = new Thread(new Runnable() {
                     @Override
@@ -102,11 +110,11 @@ public class Main {
                             statement = conn.prepareStatement("set autocommit=off");
                             statement.executeQuery();
 
-                            query = "create database " + host + "_" + dbRandom;
-                            resultCode = statement.executeUpdate(query);
-                            Logger.getLogger(Main.class.getName()).log(Level.INFO, query);
+                            query = "create database if not exists " + host + "_" + dbRandom;
+                            statement.executeUpdate(query);
+                            if(isLogged) Logger.getLogger(Main.class.getName()).log(Level.INFO, query);
                             for (int k = 1; k <= tableN; k++) {
-                                tableQuery = "create table " + host + "_" + dbRandom
+                                tableQuery = "create table if not exists " + host + "_" + dbRandom
                                         + ".tbl_" + k + " (col int not null AUTO_INCREMENT, "
                                         + "v1 varchar(255), "
                                         + "v2 varchar(255), "
@@ -114,8 +122,8 @@ public class Main {
                                         + "v5 varchar(255), " + "v6 varchar(255), "
                                         + "v7 varchar(255), "
                                         + "primary key(col))";
-                                resultCode = statement.executeUpdate(tableQuery);
-                                Logger.getLogger(Main.class.getName()).log(Level.INFO, tableQuery);
+                                statement.executeUpdate(tableQuery);
+                                if(isLogged) Logger.getLogger(Main.class.getName()).log(Level.INFO, tableQuery);
                                 for (int j = 1; j <= rowN; j++) {
                                     insertQuery = "insert delayed into "
                                             + host + "_" + dbRandom + ".tbl_" + k
@@ -133,8 +141,8 @@ public class Main {
                                         statement = conn.prepareStatement(insertQuery);
                                         resultCode = statement.executeUpdate(insertQuery);
 
-                                        Logger.getLogger(Main.class.getName()).log(Level.INFO, insertQuery);
-                                        Logger.getLogger(Main.class.getName()).log(Level.INFO, "resultCode=" + resultCode);
+                                        if(isLogged) Logger.getLogger(Main.class.getName()).log(Level.INFO, insertQuery);
+                                        if(isLogged) Logger.getLogger(Main.class.getName()).log(Level.INFO, "resultCode=" + resultCode);
                                     } catch (MySQLTransactionRollbackException ex) {
                                         try {
                                             statement = conn.prepareStatement(insertQuery);
@@ -178,14 +186,13 @@ public class Main {
                 });
                 db.getThread().add(thread);
             }
+        });
 
-        }
-
-        for (Database db : dbs) {
-            for (Thread thread : db.getThread()) {
+        dbs.stream().forEach((db) -> {
+            db.getThread().stream().forEach((thread) -> {
                 thread.start();
-            }
-        }
+            });
+        });
 
     }
 
